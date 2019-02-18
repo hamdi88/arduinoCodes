@@ -1,6 +1,8 @@
 
 #include <Arduino_FreeRTOS.h>
 #include <Wire.h>
+#include <SPI.h>
+
 #include <queue.h>
 #include <semphr.h>
 #include "PinChangeInterrupt.h"
@@ -11,12 +13,14 @@
 #define LED 3
 #define PlusPin 12 // it is MISO Pin need to be changed to meet hardware layout
 #define StitchPin 11 // it is MOSI Pin need to be changed to meet hardware layout
+#define KlammerPin 14 // it is SCK Pin need to be changed to meet hardware layout 
 
 QueueHandle_t queue;
 
 
 volatile bool plusOne_triggered = false ;
 volatile bool stitch_triggered = false ;
+volatile bool klammer_triggered = false ;
 
 volatile unsigned long plusOne_counter  = 0 ;
 volatile unsigned long stitch_counter  = 0 ;
@@ -33,11 +37,14 @@ void TaskI2C ( void *pvParameters );
 // the setup function runs once when you press reset or power the board
 void setup() {
 
+  SPI.end();
   pinMode(LED, OUTPUT);
-  //pinMode(PlusPin, INPUT_PULLUP);
+  pinMode(KlammerPin, INPUT);
 
   attachPCINT(digitalPinToPCINT(PlusPin), plusOne, FALLING);
   attachPCINT(digitalPinToPCINT(StitchPin), stitchCounting, FALLING);
+  attachPCINT(digitalPinToPCINT(KlammerPin), klammerUp, FALLING);
+
 
   Serial.begin(9600);
   Wire.begin();
@@ -278,20 +285,33 @@ void TaskI2C(void *pvParameters)
       Serial.println(plusOne_counter);
     }
 
+    // It turns out that the buton return nothing when pressed for 2nd time , so next section is commented
 
-    Wire.requestFrom(5, 1);    // request pattern form ble_extension board with I2C address 0x03
+    //    Wire.requestFrom(5, 1);    // request data form serial_extension board with I2C address 0x05 to see if button pressed
+    //
+    //    while (Wire.available()) { // slave may send less than requested
+    //      c = Wire.read(); // receive a byte as character
+    //      if (c != -1)// Character always received when no rfid have benn read(-1 == 0xFF)
+    //      {
+    //        Wire.beginTransmission(3); //begin transmission to UART-BLE extension
+    //        Wire.write(0x5F);
+    //        Wire.write(';');
+    //        Wire.endTransmission();
+    //      }
+    //    }
 
-    while (Wire.available()) { // slave may send less than requested
-      c = Wire.read(); // receive a byte as character
-      if (c != -1)// Character always received when no rfid have benn read(-1 == 0xFF)
-      {
-        Wire.beginTransmission(3); //begin transmission to UART-BLE extension
-        Wire.write(0x5F);
-        Wire.write(';');
-        Wire.endTransmission();
-      }
+
+    // instead we used the pin input to see if button pressed in other word when klammer is lifted up
+
+    if (klammer_triggered == true)
+    {
+      klammer_triggered =  false ;
+      Wire.beginTransmission(3); //begin transmission to UART-BLE extension
+      Wire.write(0x5F);
+      Wire.write(';');
+      Wire.endTransmission();
+      Serial.println("Klammer is Up");
     }
-
     vTaskDelay(250 / portTICK_PERIOD_MS ); // changed from 500 to 1500 to reduce I2C communication rate
 
 
@@ -308,4 +328,9 @@ void stitchCounting()
 {
   stitch_counter ++ ;
   stitch_triggered = true ;
+}
+
+void klammerUp()
+{
+  klammer_triggered = true  ;
 }
