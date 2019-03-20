@@ -11,10 +11,9 @@
 #define     MEC1_RFID   "4D0022EB8703xxx"
 //#define     LED   13
 #define LED 29
-#define PlusPin 12 // it is MISO Pin need to be changed to meet hardware layout
-#define StitchPin 11 // it is MOSI Pin need to be changed to meet hardware layout
-#define KlammerPin 14 // it is SCK Pin need to be changed to meet hardware layout 
-
+#define PlusPin 22 // //changed to meet plc basic hardware 
+#define StitchPin 23 // //changed to meet plc basic hardware 
+#define KlammerPin 24 // //changed to meet plc basic hardware 
 QueueHandle_t queue;
 
 
